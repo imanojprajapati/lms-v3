@@ -3,14 +3,12 @@ import dbConnect from '@/lib/db';
 import User from '@/models/User';
 
 // GET - Fetch single user
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     
-    const user = await User.findById(params.id)
+    const id = request.nextUrl.pathname.split('/').pop();
+    const user = await User.findById(id)
       .select('-password')
       .populate('createdBy', 'username');
 
@@ -22,7 +20,7 @@ export async function GET(
     }
 
     return NextResponse.json({ user });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching user:', error);
     return NextResponse.json(
       { error: 'Failed to fetch user' },
@@ -32,18 +30,16 @@ export async function GET(
 }
 
 // PUT - Update user
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest) {
   try {
     await dbConnect();
     
+    const id = request.nextUrl.pathname.split('/').pop();
     const body = await request.json();
     const { username, email, role, isActive } = body;
 
     // Check if user exists
-    const user = await User.findById(params.id);
+    const user = await User.findById(id);
     if (!user) {
       return NextResponse.json(
         { error: 'User not found' },
@@ -54,7 +50,7 @@ export async function PUT(
     // Check if email or username is already taken by another user
     if (email !== user.email || username !== user.username) {
       const existingUser = await User.findOne({
-        _id: { $ne: params.id },
+        _id: { $ne: id },
         $or: [{ email }, { username }]
       });
 
@@ -68,7 +64,7 @@ export async function PUT(
 
     // Update user
     const updatedUser = await User.findByIdAndUpdate(
-      params.id,
+      id,
       { username, email, role, isActive },
       { new: true, runValidators: true }
     ).select('-password');
@@ -81,7 +77,7 @@ export async function PUT(
     }
 
     return NextResponse.json({ user: updatedUser });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating user:', error);
     return NextResponse.json(
       { error: 'Failed to update user' },
@@ -91,14 +87,12 @@ export async function PUT(
 }
 
 // DELETE - Soft delete user (set isActive to false)
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest) {
   try {
     await dbConnect();
     
-    const user = await User.findById(params.id);
+    const id = request.nextUrl.pathname.split('/').pop();
+    const user = await User.findById(id);
     if (!user) {
       return NextResponse.json(
         { error: 'User not found' },
@@ -108,7 +102,7 @@ export async function DELETE(
 
     // Soft delete by setting isActive to false
     const deletedUser = await User.findByIdAndUpdate(
-      params.id,
+      id,
       { isActive: false },
       { new: true }
     ).select('-password');
@@ -117,7 +111,7 @@ export async function DELETE(
       message: 'User deleted successfully',
       user: deletedUser 
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting user:', error);
     return NextResponse.json(
       { error: 'Failed to delete user' },

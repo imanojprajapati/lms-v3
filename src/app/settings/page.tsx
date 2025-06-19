@@ -13,7 +13,7 @@ import UserManagement from "@/components/UserManagement";
 
 export default function SettingsPage() {
   const { toast } = useToast();
-  const { user, hasPermission } = useUser();
+  const { hasPermission } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [settings, setSettings] = useState({
     companyName: "",
@@ -226,7 +226,7 @@ export default function SettingsPage() {
             <Card className="glass-card shadow-premium border-blue-200/30">
               <div className="p-6">
                 <h2 className="text-xl font-semibold mb-6 text-gradient-secondary">Access Denied</h2>
-                <p className="text-slate-600">You don't have permission to access user management.</p>
+                <p className="text-slate-600">You don&apos;t have permission to access user management.</p>
               </div>
             </Card>
           )}

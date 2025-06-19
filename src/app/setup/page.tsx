@@ -61,7 +61,7 @@ export default function SetupPage() {
         throw new Error(errorData.error || 'Setup failed');
       }
 
-      const data = await response.json();
+      await response.json();
       
       toast({
         title: "Success",
@@ -69,11 +69,11 @@ export default function SetupPage() {
       });
 
       router.push('/login');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Setup error:', error);
       toast({
         title: "Error",
-        description: error.message || "Setup failed",
+        description: error instanceof Error ? error.message : "Setup failed",
         variant: "destructive",
       });
     } finally {

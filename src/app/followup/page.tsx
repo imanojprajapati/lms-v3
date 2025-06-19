@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Lead {
   _id: string;
@@ -76,6 +77,8 @@ export default function FollowupPage() {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [followupToDelete, setFollowupToDelete] = useState<Followup | null>(null);
   const { toast } = useToast();
 
   const fetchFollowups = useCallback(async () => {
@@ -108,20 +111,25 @@ export default function FollowupPage() {
     }
   }, [toast]);
 
-  const deleteFollowup = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this followup?')) {
-      return;
-    }
+  const openDeleteDialog = (followup: Followup) => {
+    setFollowupToDelete(followup);
+    setDeleteDialogOpen(true);
+  };
+
+  const deleteFollowup = async () => {
+    if (!followupToDelete) return;
 
     try {
-      setDeletingId(id);
-      const response = await fetch(`/api/followups/${id}`, {
+      setDeletingId(followupToDelete._id);
+      const response = await fetch(`/api/followups/${followupToDelete._id}`, {
         method: 'DELETE',
       });
       const result = await response.json();
       
       if (result.success) {
-        setFollowups(followups.filter(followup => followup._id !== id));
+        setFollowups(followups.filter(followup => followup._id !== followupToDelete._id));
+        setDeleteDialogOpen(false);
+        setFollowupToDelete(null);
         toast({
           title: "Success",
           description: "Followup deleted successfully",
@@ -447,7 +455,7 @@ export default function FollowupPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" asChild>
+                            <Button variant="ghost" size="icon" asChild className="hover:bg-blue-100 hover:text-blue-600 transition-colors duration-300">
                               <Link href={`/leads/${followup.leadId?._id}`}>
                                 <Eye className="h-4 w-4" />
                               </Link>
@@ -455,8 +463,9 @@ export default function FollowupPage() {
                             <Button 
                               variant="ghost" 
                               size="icon"
-                              onClick={() => deleteFollowup(followup._id)}
+                              onClick={() => openDeleteDialog(followup)}
                               disabled={deletingId === followup._id}
+                              className="hover:bg-red-100 hover:text-red-600 transition-colors duration-300"
                             >
                               {deletingId === followup._id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -475,6 +484,73 @@ export default function FollowupPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-gradient-to-br from-red-50 to-pink-50 border-2 border-red-200/50 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600 text-lg font-semibold">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Follow-up
+            </DialogTitle>
+            <DialogDescription className="text-slate-600">
+              Are you sure you want to delete the follow-up <span className="font-semibold text-slate-900">&quot;{followupToDelete?.title}&quot;</span>? 
+              This action cannot be undone and will permanently remove:
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="bg-red-100 border border-red-300 rounded-lg p-4 my-4">
+            <ul className="text-sm text-red-800 space-y-1">
+              <li>• Follow-up title and details</li>
+              <li>• Scheduled date and time</li>
+              <li>• Communication method and priority</li>
+              <li>• Notes and activity history</li>
+            </ul>
+          </div>
+
+          {followupToDelete && (
+            <div className="bg-white border border-red-200 rounded-lg p-3 my-2">
+              <div className="text-sm text-slate-600 space-y-1">
+                <div><span className="font-medium">Lead:</span> {followupToDelete.leadId?.name}</div>
+                <div><span className="font-medium">Date:</span> {formatDate(followupToDelete.nextFollowupDate)}</div>
+                <div><span className="font-medium">Method:</span> {followupToDelete.communicationMethod}</div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setFollowupToDelete(null);
+              }}
+              disabled={deletingId !== null}
+              className="flex-1 sm:flex-none bg-white hover:bg-gray-50 border-gray-300"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={deleteFollowup}
+              disabled={deletingId !== null}
+              className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white shadow-lg"
+            >
+              {deletingId !== null ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Follow-up
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

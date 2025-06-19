@@ -144,7 +144,7 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-6">
         <div>
           <h1 className="text-3xl font-bold text-red-600">Access Denied</h1>
-          <p className="text-gray-600 mt-1">You don't have permission to access the dashboard</p>
+          <p className="text-gray-600 mt-1">You don&apos;t have permission to access the dashboard</p>
         </div>
         <Card>
           <CardContent className="flex items-center justify-center h-64">
@@ -152,7 +152,7 @@ export default function DashboardPage() {
               <Lock className="h-12 w-12 text-red-500 mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">Dashboard Access Restricted</h3>
               <p className="text-gray-600 mb-4">
-                Your role ({user?.role.replace('-', ' ')}) doesn't have access to the dashboard.
+                Your role ({user?.role.replace('-', ' ')}) doesn&apos;t have access to the dashboard.
               </p>
               <div className="space-x-2">
                 <Button onClick={() => router.push('/leads')} variant="outline">

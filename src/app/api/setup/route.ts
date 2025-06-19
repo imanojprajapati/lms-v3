@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       }
     }, { status: 201 });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Setup error:', error);
     return NextResponse.json(
       { error: 'Failed to create admin user' },
@@ -70,7 +70,7 @@ export async function GET() {
       setupRequired: userCount === 0,
       userCount
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Setup check error:', error);
     return NextResponse.json(
       { error: 'Failed to check setup status' },

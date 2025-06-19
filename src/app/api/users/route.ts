@@ -4,7 +4,7 @@ import User from '@/models/User';
 import nodemailer from 'nodemailer';
 
 // GET - Fetch all users
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     await dbConnect();
     
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 });
 
     return NextResponse.json({ users });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching users:', error);
     return NextResponse.json(
       { error: 'Failed to fetch users' },
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     };
 
     return NextResponse.json({ user: userResponse }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating user:', error);
     return NextResponse.json(
       { error: 'Failed to create user' },

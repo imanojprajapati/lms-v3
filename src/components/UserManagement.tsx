@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { UserRole } from "@/contexts/UserContext";
-import { Plus, Edit, Trash2, Eye, Mail, Shield } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Shield } from "lucide-react";
 
 interface User {
   id: string;
@@ -69,7 +69,7 @@ export default function UserManagement() {
   });
 
   // Fetch users
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await fetch('/api/users');
       if (!response.ok) throw new Error('Failed to fetch users');
@@ -85,11 +85,11 @@ export default function UserManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
   // Create user
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -137,11 +137,11 @@ export default function UserManagement() {
         title: "Success",
         description: "User created successfully. Welcome email sent!",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating user:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create user",
+        description: error instanceof Error ? error.message : "Failed to create user",
         variant: "destructive",
       });
     }
@@ -191,11 +191,11 @@ export default function UserManagement() {
         title: "Success",
         description: "User updated successfully",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating user:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to update user",
+        description: error instanceof Error ? error.message : "Failed to update user",
         variant: "destructive",
       });
     }
@@ -229,11 +229,11 @@ export default function UserManagement() {
         title: "Success",
         description: "User deleted successfully",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting user:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to delete user",
+        description: error instanceof Error ? error.message : "Failed to delete user",
         variant: "destructive",
       });
     }

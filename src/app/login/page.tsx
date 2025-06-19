@@ -46,11 +46,11 @@ export default function LoginPage() {
       });
 
       router.push('/dashboard');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login error:', error);
       toast({
         title: "Error",
-        description: error.message || "Login failed",
+        description: error instanceof Error ? error.message : "Login failed",
         variant: "destructive",
       });
     } finally {
@@ -130,7 +130,7 @@ export default function LoginPage() {
 
             <div className="mt-8 text-center">
               <p className="text-sm text-slate-500">
-                Don't have an account? Contact your administrator to get access.
+                Don&apos;t have an account? Contact your administrator to get access.
               </p>
             </div>
           </div>

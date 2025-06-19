@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as any;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as { userId: string; username: string; role: string };
       
       const user = await User.findById(decoded.userId)
         .select('-password')
@@ -37,13 +37,13 @@ export async function GET(request: NextRequest) {
         role: user.role,
         isActive: user.isActive
       });
-    } catch (jwtError) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid token' },
         { status: 401 }
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Auth check error:', error);
     return NextResponse.json(
       { error: 'Authentication failed' },
