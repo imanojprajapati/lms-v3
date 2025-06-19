@@ -8,9 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Loader2, Calendar } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ArrowLeft, Save, Loader2, Calendar as CalendarIcon, Clock } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Lead {
   _id: string;
@@ -33,10 +37,11 @@ export default function NewFollowupPage() {
   const [formData, setFormData] = useState({
     title: '',
     leadId: leadId || '',
-    nextFollowupDate: '',
+    nextFollowupDate: undefined as Date | undefined,
     nextFollowupTime: '',
     communicationMethod: '',
     priority: 'medium',
+    status: 'New',
     notes: ''
   });
 
@@ -48,14 +53,15 @@ export default function NewFollowupPage() {
         const result = await response.json();
         if (result.success) {
           setLeads(result.data);
-          // If leadId is provided, pre-select it and set title
+          // If leadId is provided, pre-select it and set title and status
           if (leadId) {
             const selectedLead = result.data.find((lead: Lead) => lead._id === leadId);
             if (selectedLead) {
               setFormData(prev => ({
                 ...prev,
                 leadId: leadId,
-                title: `Follow-up with ${selectedLead.name}`
+                title: `Follow-up with ${selectedLead.name}`,
+                status: selectedLead.status || 'New'
               }));
             }
           }
@@ -75,7 +81,8 @@ export default function NewFollowupPage() {
     
     // Basic validation
     if (!formData.title.trim() || !formData.leadId || !formData.nextFollowupDate || 
-        !formData.nextFollowupTime || !formData.communicationMethod || !formData.priority) {
+        !formData.nextFollowupTime || !formData.communicationMethod || !formData.priority || 
+        !formData.status) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
@@ -88,7 +95,8 @@ export default function NewFollowupPage() {
       setLoading(true);
       
       // Combine date and time
-      const nextFollowupDateTime = new Date(`${formData.nextFollowupDate}T${formData.nextFollowupTime}`);
+      const dateStr = format(formData.nextFollowupDate, 'yyyy-MM-dd');
+      const nextFollowupDateTime = new Date(`${dateStr}T${formData.nextFollowupTime}`);
       
       const followupData = {
         title: formData.title,
@@ -96,10 +104,11 @@ export default function NewFollowupPage() {
         nextFollowupDate: nextFollowupDateTime.toISOString(),
         communicationMethod: formData.communicationMethod,
         priority: formData.priority,
-        notes: formData.notes,
-        status: 'New'
+        status: formData.status,
+        notes: formData.notes
       };
 
+      // Create the followup
       const response = await fetch('/api/followups', {
         method: 'POST',
         headers: {
@@ -111,10 +120,30 @@ export default function NewFollowupPage() {
       const result = await response.json();
 
       if (result.success) {
-        toast({
-          title: "Success",
-          description: "Follow-up scheduled successfully",
+        // Update the lead's status with the same status value
+        const leadUpdateResponse = await fetch(`/api/leads/${formData.leadId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: formData.status }),
         });
+
+        const leadUpdateResult = await leadUpdateResponse.json();
+        
+        if (leadUpdateResult.success) {
+          toast({
+            title: "Success",
+            description: "Follow-up scheduled and lead status updated successfully",
+          });
+        } else {
+          toast({
+            title: "Partial Success",
+            description: "Follow-up scheduled but failed to update lead status",
+            variant: "destructive",
+          });
+        }
+        
         router.push('/followup');
       } else {
         toast({
@@ -134,7 +163,7 @@ export default function NewFollowupPage() {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | Date) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -146,13 +175,13 @@ export default function NewFollowupPage() {
     setFormData(prev => ({
       ...prev,
       leadId: leadId,
-      title: selectedLead ? `Follow-up with ${selectedLead.name}` : ''
+      title: selectedLead ? `Follow-up with ${selectedLead.name}` : '',
+      status: selectedLead ? selectedLead.status : 'New'
     }));
   };
 
-  // Get current date and time for min values
-  const now = new Date();
-  const currentDate = now.toISOString().split('T')[0];
+  // Get current date for min date validation
+  const today = new Date();
 
   return (
     <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in">
@@ -171,7 +200,7 @@ export default function NewFollowupPage() {
       <Card className="max-w-2xl glass-card shadow-premium border-purple-200/30">
         <CardHeader>
           <CardTitle className="text-xl text-gradient-secondary flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
+            <CalendarIcon className="h-5 w-5" />
             Follow-up Details
           </CardTitle>
         </CardHeader>
@@ -187,12 +216,22 @@ export default function NewFollowupPage() {
                 <SelectTrigger className="h-12 bg-white/90 border-purple-200/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-xl">
                   <SelectValue placeholder={loadingLeads ? "Loading leads..." : "Select a lead"} />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-purple-200/50 rounded-xl">
-                  {leads.map((lead) => (
-                    <SelectItem key={lead._id} value={lead._id}>
-                      {lead.name} - {lead.email}
-                    </SelectItem>
-                  ))}
+                <SelectContent className="bg-white border-purple-200/50 rounded-xl max-h-60">
+                  {leads.length === 0 ? (
+                    <div className="px-2 py-4 text-center text-sm text-slate-500">
+                      No leads available
+                    </div>
+                  ) : (
+                    leads.map((lead) => (
+                      <SelectItem key={lead._id} value={lead._id} className="py-3">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{lead.name}</span>
+                          <span className="text-xs text-slate-500">{lead.email} • {lead.phone}</span>
+                          <span className="text-xs text-purple-600 font-medium">Status: {lead.status}</span>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -212,27 +251,76 @@ export default function NewFollowupPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="nextFollowupDate">Follow-up Date *</Label>
-                <Input
-                  id="nextFollowupDate"
-                  type="date"
-                  min={currentDate}
-                  value={formData.nextFollowupDate}
-                  onChange={(e) => handleInputChange('nextFollowupDate', e.target.value)}
-                  required
-                  className="h-12 bg-white/90 border-purple-200/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-xl transition-all duration-300"
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full h-12 justify-start text-left font-normal bg-white/90 border-purple-200/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-xl transition-all duration-300",
+                        !formData.nextFollowupDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.nextFollowupDate ? (
+                        format(formData.nextFollowupDate, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-white/95 backdrop-blur-sm border-purple-200/50 shadow-xl rounded-xl" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.nextFollowupDate}
+                      onSelect={(date) => handleInputChange('nextFollowupDate', date || new Date())}
+                      disabled={(date) => date < today}
+                      initialFocus
+                      className="bg-white/90 rounded-xl"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="nextFollowupTime">Follow-up Time *</Label>
-                <Input
-                  id="nextFollowupTime"
-                  type="time"
-                  value={formData.nextFollowupTime}
-                  onChange={(e) => handleInputChange('nextFollowupTime', e.target.value)}
-                  required
-                  className="h-12 bg-white/90 border-purple-200/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-xl transition-all duration-300"
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  <Select 
+                    value={formData.nextFollowupTime.split(':')[0] || ''} 
+                    onValueChange={(hour) => {
+                      const currentMinute = formData.nextFollowupTime.split(':')[1] || '00';
+                      handleInputChange('nextFollowupTime', `${hour}:${currentMinute}`);
+                    }}
+                  >
+                    <SelectTrigger className="h-12 bg-white/90 border-purple-200/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-xl">
+                      <SelectValue placeholder="Hour" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-purple-200/50 rounded-xl max-h-60">
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <SelectItem key={i} value={i.toString().padStart(2, '0')}>
+                          {i.toString().padStart(2, '0')}:00
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select 
+                    value={formData.nextFollowupTime.split(':')[1] || ''} 
+                    onValueChange={(minute) => {
+                      const currentHour = formData.nextFollowupTime.split(':')[0] || '09';
+                      handleInputChange('nextFollowupTime', `${currentHour}:${minute}`);
+                    }}
+                  >
+                    <SelectTrigger className="h-12 bg-white/90 border-purple-200/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-xl">
+                      <SelectValue placeholder="Min" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-purple-200/50 rounded-xl max-h-60">
+                      {['00', '15', '30', '45'].map((minute) => (
+                        <SelectItem key={minute} value={minute}>
+                          :{minute}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
@@ -268,6 +356,25 @@ export default function NewFollowupPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status *</Label>
+              <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
+                <SelectTrigger className="h-12 bg-white/90 border-purple-200/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-xl">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-purple-200/50 rounded-xl">
+                  <SelectItem value="New">New</SelectItem>
+                  <SelectItem value="Contacted">Contacted</SelectItem>
+                  <SelectItem value="Interested">Interested</SelectItem>
+                  <SelectItem value="Converted">Converted</SelectItem>
+                  <SelectItem value="Lost">Lost</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500 mt-1">
+                This status will be applied to both the followup and the lead
+              </p>
             </div>
 
             <div className="space-y-2">

@@ -2,12 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import Followup from "@/models/Followup";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     await dbConnect();
-    const followups = await Followup.find({})
+    
+    // Get leadId from query parameters
+    const { searchParams } = new URL(request.url);
+    const leadId = searchParams.get('leadId');
+    
+    // Build query - filter by leadId if provided
+    const query = leadId ? { leadId } : {};
+    
+    const followups = await Followup.find(query)
       .populate('leadId', 'name email phone')
       .sort({ nextFollowupDate: 1 });
+      
     return NextResponse.json({ success: true, data: followups });
   } catch (error) {
     console.error('Error fetching followups:', error);
@@ -23,7 +32,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     
     // Validate required fields
-    const requiredFields = ['leadId', 'title', 'nextFollowupDate', 'communicationMethod', 'priority', 'status'];
+    const requiredFields = ['leadId', 'title', 'nextFollowupDate', 'communicationMethod', 'priority'];
     for (const field of requiredFields) {
       if (!body[field]) {
         return NextResponse.json(
@@ -41,7 +50,7 @@ export async function POST(request: NextRequest) {
       nextFollowupDate: new Date(body.nextFollowupDate),
       communicationMethod: body.communicationMethod,
       priority: body.priority,
-      status: body.status,
+      status: body.status || 'New',
       notes: body.notes?.trim() || ''
     });
 

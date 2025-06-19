@@ -46,8 +46,7 @@ export default function EditLeadPage({ params }: { params: Promise<{ id: string 
     city: '',
     state: '',
     country: '',
-    status: '',
-    notes: ''
+    status: ''
   });
 
   const fetchLead = useCallback(async () => {
@@ -71,8 +70,7 @@ export default function EditLeadPage({ params }: { params: Promise<{ id: string 
           city: leadData.city || '',
           state: leadData.state || '',
           country: leadData.country || '',
-          status: leadData.status || '',
-          notes: leadData.notes || ''
+          status: leadData.status || ''
         });
       } else {
         setError(result.error || 'Failed to fetch lead');
@@ -118,6 +116,9 @@ export default function EditLeadPage({ params }: { params: Promise<{ id: string 
       setSaving(true);
       const resolvedParams = await params;
       
+      // Check if status has changed
+      const statusChanged = lead && lead.status !== formData.status;
+      
       const response = await fetch(`/api/leads/${resolvedParams.id}`, {
         method: 'PUT',
         headers: {
@@ -129,10 +130,49 @@ export default function EditLeadPage({ params }: { params: Promise<{ id: string 
       const result = await response.json();
 
       if (result.success) {
-        toast({
-          title: "Success",
-          description: "Lead updated successfully",
-        });
+        // If status changed, update all followups for this lead
+        if (statusChanged) {
+          try {
+            const followupsResponse = await fetch(`/api/followups/update-status`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                leadId: resolvedParams.id,
+                status: formData.status
+              }),
+            });
+
+            const followupsResult = await followupsResponse.json();
+            
+            if (followupsResult.success) {
+              toast({
+                title: "Success",
+                description: "Lead and followup statuses updated successfully",
+              });
+            } else {
+              toast({
+                title: "Partial Success",
+                description: "Lead updated but failed to update followup statuses",
+                variant: "destructive",
+              });
+            }
+          } catch (error) {
+            console.error('Error updating followup statuses:', error);
+            toast({
+              title: "Partial Success",
+              description: "Lead updated but failed to update followup statuses",
+              variant: "destructive",
+            });
+          }
+        } else {
+          toast({
+            title: "Success",
+            description: "Lead updated successfully",
+          });
+        }
+        
         router.push(`/leads/${resolvedParams.id}`);
       } else {
         toast({
@@ -374,15 +414,17 @@ export default function EditLeadPage({ params }: { params: Promise<{ id: string 
                           {country}
                         </SelectItem>
                       ))}
-                      <div className="border-t my-1"></div>
-                      <div className="px-2 py-1 text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                        All Countries
-                      </div>
-                      {countries.map((country) => (
-                        <SelectItem key={country.code} value={country.name}>
-                          {country.name}
-                        </SelectItem>
-                      ))}
+                                             <div className="border-t my-1"></div>
+                       <div className="px-2 py-1 text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                         All Countries
+                       </div>
+                       {countries
+                         .filter(country => !popularDestinations.includes(country.name))
+                         .map((country) => (
+                           <SelectItem key={`all-${country.code}`} value={country.name}>
+                             {country.name}
+                           </SelectItem>
+                         ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -391,7 +433,7 @@ export default function EditLeadPage({ params }: { params: Promise<{ id: string 
 
             {/* Status and Notes */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-blue-700">Status & Notes</h3>
+              <h3 className="text-lg font-semibold text-blue-700">Status</h3>
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="status">Status *</Label>
@@ -407,18 +449,6 @@ export default function EditLeadPage({ params }: { params: Promise<{ id: string 
                       <SelectItem value="Lost">Lost</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
-                    placeholder="Add any additional notes about this lead"
-                    value={formData.notes}
-                    onChange={(e) => handleInputChange('notes', e.target.value)}
-                    rows={4}
-                    className="bg-white/90 border-blue-200/50 focus:border-blue-400 focus:ring-blue-400/20 rounded-xl transition-all duration-300"
-                  />
                 </div>
               </div>
             </div>

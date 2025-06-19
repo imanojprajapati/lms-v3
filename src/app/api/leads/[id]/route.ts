@@ -49,31 +49,44 @@ export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
     
-    // Validate required fields
-    const requiredFields = ['name', 'email', 'phone', 'visaType', 'destinationCountry'];
-    for (const field of requiredFields) {
-      if (!body[field] || body[field].trim() === '') {
+    // Check if this is a status-only update (from followup form)
+    const isStatusOnlyUpdate = Object.keys(body).length === 1 && body.status;
+    
+    if (!isStatusOnlyUpdate) {
+      // Full update validation - require all fields
+      const requiredFields = ['name', 'email', 'phone', 'visaType', 'destinationCountry'];
+      for (const field of requiredFields) {
+        if (!body[field] || body[field].trim() === '') {
+          return NextResponse.json(
+            { success: false, error: `${field} is required` },
+            { status: 400 }
+          );
+        }
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(body.email)) {
         return NextResponse.json(
-          { success: false, error: `${field} is required` },
+          { success: false, error: 'Invalid email format' },
           { status: 400 }
         );
       }
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(body.email)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid email format' },
-        { status: 400 }
-      );
-    }
-
     await dbConnect();
 
-    const lead = await Lead.findByIdAndUpdate(
-      id,
-      {
+    let updateData;
+    
+    if (isStatusOnlyUpdate) {
+      // Status-only update
+      updateData = {
+        status: body.status,
+        updatedAt: new Date()
+      };
+    } else {
+      // Full update
+      updateData = {
         name: body.name.trim(),
         email: body.email.trim().toLowerCase(),
         phone: body.phone.trim(),
@@ -85,7 +98,12 @@ export async function PUT(req: NextRequest) {
         status: body.status,
         notes: body.notes || '',
         updatedAt: new Date()
-      },
+      };
+    }
+
+    const lead = await Lead.findByIdAndUpdate(
+      id,
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -128,8 +146,9 @@ export async function DELETE(req: NextRequest) {
 
   try {
     await dbConnect();
-    const lead = await Lead.findByIdAndDelete(id);
-
+    
+    // First, check if the lead exists
+    const lead = await Lead.findById(id);
     if (!lead) {
       return NextResponse.json(
         { success: false, error: 'Lead not found' },
@@ -137,10 +156,21 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
+    // Delete associated followups first
+    const Followup = (await import('@/models/Followup')).default;
+    const followupDeleteResult = await Followup.deleteMany({ leadId: id });
+    
+    // Then delete the lead
+    await Lead.findByIdAndDelete(id);
+
     return NextResponse.json({ 
       success: true, 
-      message: 'Lead deleted successfully',
-      data: { id: lead._id }
+      message: 'Lead and associated followups deleted successfully',
+      data: { 
+        id: lead._id,
+        name: lead.name,
+        deletedFollowups: followupDeleteResult.deletedCount
+      }
     });
   } catch (error) {
     console.error('Error deleting lead:', error);

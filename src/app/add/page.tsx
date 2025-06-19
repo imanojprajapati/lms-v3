@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { countries, popularDestinations } from "@/lib/countries";
 
-export default function AddLeadPage() {
+export default function AddPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -55,12 +55,18 @@ export default function AddLeadPage() {
     try {
       setLoading(true);
       
+      // Add default status for new leads
+      const leadData = {
+        ...formData,
+        status: 'New'
+      };
+      
       const response = await fetch('/api/leads', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(leadData),
       });
 
       const result = await response.json();
@@ -245,11 +251,13 @@ export default function AddLeadPage() {
                       <div className="px-2 py-1 text-xs font-semibold text-slate-600 uppercase tracking-wide">
                         All Countries
                       </div>
-                      {countries.map((country) => (
-                        <SelectItem key={country.code} value={country.name}>
-                          {country.name}
-                        </SelectItem>
-                      ))}
+                      {countries
+                        .filter(country => !popularDestinations.includes(country.name))
+                        .map((country) => (
+                          <SelectItem key={`all-${country.code}`} value={country.name}>
+                            {country.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -281,4 +289,4 @@ export default function AddLeadPage() {
       </Card>
     </div>
   );
-}
+} 

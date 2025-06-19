@@ -47,8 +47,8 @@ interface Followup {
   leadId: Lead;
   nextFollowupDate: string;
   communicationMethod: string;
-  status: string;
   priority: 'low' | 'medium' | 'high';
+  status: 'New' | 'Contacted' | 'Interested' | 'Converted' | 'Lost';
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -61,11 +61,11 @@ const priorityColors = {
 };
 
 const statusColors = {
-  'New': 'bg-blue-100 text-blue-800',
-  'Contacted': 'bg-yellow-100 text-yellow-800',
-  'Interested': 'bg-orange-100 text-orange-800',
-  'Converted': 'bg-green-100 text-green-800',
-  'Lost': 'bg-red-100 text-red-800',
+  New: 'bg-gray-100 text-gray-800',
+  Contacted: 'bg-yellow-100 text-yellow-800',
+  Interested: 'bg-blue-100 text-blue-800',
+  Converted: 'bg-green-100 text-green-800',
+  Lost: 'bg-red-100 text-red-800',
 };
 
 export default function FollowupPage() {
@@ -73,8 +73,8 @@ export default function FollowupPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -155,10 +155,20 @@ export default function FollowupPage() {
       followup.leadId?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       followup.leadId?.phone.includes(searchTerm);
     
-    const matchesStatus = statusFilter === 'all' || followup.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || followup.priority === priorityFilter;
+    const matchesStatus = statusFilter === 'all' || followup.status === statusFilter;
     
-    return matchesSearch && matchesStatus && matchesPriority;
+    // Only show followups that are scheduled for today or future dates
+    const followupDate = new Date(followup.nextFollowupDate);
+    const today = new Date();
+    
+    // Set time to start of day for accurate date comparison
+    const followupDateOnly = new Date(followupDate.getFullYear(), followupDate.getMonth(), followupDate.getDate());
+    const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    const isCurrentOrFuture = followupDateOnly >= todayDateOnly;
+    
+    return matchesSearch && matchesPriority && matchesStatus && isCurrentOrFuture;
   });
 
   const formatDate = (dateString: string) => {
@@ -182,10 +192,24 @@ export default function FollowupPage() {
     return daysDiff <= 3 && daysDiff >= 0;
   };
 
-  // Calculate stats
-  const overdueCount = followups.filter(f => isOverdue(f.nextFollowupDate)).length;
-  const upcomingCount = followups.filter(f => isUpcoming(f.nextFollowupDate)).length;
-  const totalCount = followups.length;
+  const isCurrentOrFuture = (dateString: string) => {
+    const followupDate = new Date(dateString);
+    const today = new Date();
+    
+    // Set time to start of day for accurate date comparison
+    const followupDateOnly = new Date(followupDate.getFullYear(), followupDate.getMonth(), followupDate.getDate());
+    const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    return followupDateOnly >= todayDateOnly;
+  };
+
+  // Filter followups to only include current and future dates
+  const currentAndFutureFollowups = followups.filter(f => isCurrentOrFuture(f.nextFollowupDate));
+
+  // Calculate stats based on current and future followups only
+  const overdueCount = currentAndFutureFollowups.filter(f => isOverdue(f.nextFollowupDate)).length;
+  const upcomingCount = currentAndFutureFollowups.filter(f => isUpcoming(f.nextFollowupDate)).length;
+  const totalCount = currentAndFutureFollowups.length;
 
   if (loading) {
     return (
@@ -243,18 +267,21 @@ export default function FollowupPage() {
         <div>
           <h1 className="text-gradient">Follow-ups</h1>
           <p className="text-slate-600">Manage your follow-up activities</p>
+          <p className="text-xs text-slate-500 mt-1">
+            📅 Only showing current and upcoming followups
+          </p>
         </div>
         <div className="flex gap-2 self-start sm:self-auto">
           <Button onClick={fetchFollowups} variant="outline" className="hover-scale">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-        <Link href="/followup/new">
+          <Link href="/followup/new">
             <Button className="hover-scale shadow-premium">
               <CalendarPlus className="h-4 w-4 mr-2" />
               Schedule Follow-up
             </Button>
-        </Link>
+          </Link>
         </div>
       </div>
 
@@ -302,7 +329,7 @@ export default function FollowupPage() {
       <Card className="glass-card shadow-premium border-purple-200/30">
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
+            <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
                 <Input
@@ -312,20 +339,7 @@ export default function FollowupPage() {
                   className="pl-12 h-12 bg-white/90 border-purple-200/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-xl transition-all duration-300"
                 />
               </div>
-        </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-48 h-12 bg-white/90 border-purple-200/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-xl">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-              <SelectContent className="bg-white border-purple-200/50 rounded-xl">
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="New">New</SelectItem>
-                <SelectItem value="Contacted">Contacted</SelectItem>
-                <SelectItem value="Interested">Interested</SelectItem>
-                <SelectItem value="Converted">Converted</SelectItem>
-                <SelectItem value="Lost">Lost</SelectItem>
-              </SelectContent>
-            </Select>
+            </div>
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
               <SelectTrigger className="w-full sm:w-48 h-12 bg-white/90 border-purple-200/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-xl">
                 <SelectValue placeholder="Filter by priority" />
@@ -335,9 +349,22 @@ export default function FollowupPage() {
                 <SelectItem value="high">High</SelectItem>
                 <SelectItem value="medium">Medium</SelectItem>
                 <SelectItem value="low">Low</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-48 h-12 bg-white/90 border-purple-200/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-xl">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-purple-200/50 rounded-xl">
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="New">New</SelectItem>
+                <SelectItem value="Contacted">Contacted</SelectItem>
+                <SelectItem value="Interested">Interested</SelectItem>
+                <SelectItem value="Converted">Converted</SelectItem>
+                <SelectItem value="Lost">Lost</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 
@@ -346,105 +373,105 @@ export default function FollowupPage() {
         <CardContent className="p-0">
           <div className="rounded-xl border border-purple-200/30 overflow-hidden">
             <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
+              <Table>
+                <TableHeader>
                   <TableRow className="bg-purple-50 hover:bg-purple-100 border-b border-purple-200/30">
                     <TableHead className="font-bold text-slate-700 h-14 whitespace-nowrap">Title</TableHead>
                     <TableHead className="font-bold text-slate-700 whitespace-nowrap">Lead</TableHead>
                     <TableHead className="font-bold text-slate-700 whitespace-nowrap">Contact</TableHead>
                     <TableHead className="font-bold text-slate-700 whitespace-nowrap">Next Follow-up</TableHead>
                     <TableHead className="font-bold text-slate-700 whitespace-nowrap">Method</TableHead>
-                    <TableHead className="font-bold text-slate-700 whitespace-nowrap">Status</TableHead>
                     <TableHead className="font-bold text-slate-700 whitespace-nowrap">Priority</TableHead>
+                    <TableHead className="font-bold text-slate-700 whitespace-nowrap">Status</TableHead>
                     <TableHead className="text-right font-bold text-slate-700 whitespace-nowrap">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-                {filteredFollowups.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                      {followups.length === 0 ? (
-                        <div>
-                          <div className="text-4xl mb-2">📅</div>
-                          <p>No follow-ups scheduled yet</p>
-                          <Link href="/leads">
-                            <Button className="mt-4" size="sm">
-                              Schedule Your First Follow-up
-                            </Button>
-                          </Link>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="text-4xl mb-2">🔍</div>
-                          <p>No follow-ups match your filters</p>
-                        </div>
-                      )}
-                    </TableCell>
                   </TableRow>
-                ) : (
-                  filteredFollowups.map((followup) => (
-                    <TableRow key={followup._id} className={isOverdue(followup.nextFollowupDate) ? 'bg-red-50' : isUpcoming(followup.nextFollowupDate) ? 'bg-orange-50' : ''}>
-                      <TableCell className="font-medium">{followup.title}</TableCell>
-                      <TableCell>{followup.leadId?.name || 'Unknown Lead'}</TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div>{followup.leadId?.email}</div>
-                          <div className="text-gray-500">{followup.leadId?.phone}</div>
-                        </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredFollowups.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                        {followups.length === 0 ? (
+                          <div>
+                            <div className="text-4xl mb-2">📅</div>
+                            <p>No follow-ups scheduled yet</p>
+                            <Link href="/leads">
+                              <Button className="mt-4" size="sm">
+                                Schedule Your First Follow-up
+                              </Button>
+                            </Link>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="text-4xl mb-2">🔍</div>
+                            <p>No follow-ups match your filters</p>
+                          </div>
+                        )}
                       </TableCell>
-                      <TableCell>
-                        <div className={`text-sm ${isOverdue(followup.nextFollowupDate) ? 'text-red-600 font-medium' : isUpcoming(followup.nextFollowupDate) ? 'text-orange-600 font-medium' : ''}`}>
-                          {formatDate(followup.nextFollowupDate)}
-                          {isOverdue(followup.nextFollowupDate) && (
-                            <Badge variant="destructive" className="ml-2 text-xs">
-                              Overdue
-                            </Badge>
-                          )}
-                          {isUpcoming(followup.nextFollowupDate) && (
-                            <Badge variant="secondary" className="ml-2 text-xs bg-orange-100 text-orange-800">
-                              Due Soon
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                <TableCell>{followup.communicationMethod}</TableCell>
-                      <TableCell>
-                        <Badge className={statusColors[followup.status as keyof typeof statusColors]}>
-                          {followup.status}
-                        </Badge>
-                      </TableCell>
-                <TableCell>
-                        <Badge className={priorityColors[followup.priority]} variant="outline">
-                          {followup.priority.charAt(0).toUpperCase() + followup.priority.slice(1)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" asChild>
-                            <Link href={`/leads/${followup.leadId?._id}`}>
-                        <Eye className="h-4 w-4" />
-                    </Link>
-                      </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => deleteFollowup(followup._id)}
-                            disabled={deletingId === followup._id}
-                          >
-                            {deletingId === followup._id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                      <Trash2 className="h-4 w-4" />
+                    </TableRow>
+                  ) : (
+                    filteredFollowups.map((followup) => (
+                      <TableRow key={followup._id} className={isOverdue(followup.nextFollowupDate) ? 'bg-red-50' : isUpcoming(followup.nextFollowupDate) ? 'bg-orange-50' : ''}>
+                        <TableCell className="font-medium">{followup.title}</TableCell>
+                        <TableCell>{followup.leadId?.name || 'Unknown Lead'}</TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div>{followup.leadId?.email}</div>
+                            <div className="text-gray-500">{followup.leadId?.phone}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className={`text-sm ${isOverdue(followup.nextFollowupDate) ? 'text-red-600 font-medium' : isUpcoming(followup.nextFollowupDate) ? 'text-orange-600 font-medium' : ''}`}>
+                            {formatDate(followup.nextFollowupDate)}
+                            {isOverdue(followup.nextFollowupDate) && (
+                              <Badge variant="destructive" className="ml-2 text-xs">
+                                Overdue
+                              </Badge>
                             )}
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-                  ))
-                )}
-          </TableBody>
-        </Table>
-      </div>
+                            {isUpcoming(followup.nextFollowupDate) && (
+                              <Badge variant="secondary" className="ml-2 text-xs bg-orange-100 text-orange-800">
+                                Due Soon
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{followup.communicationMethod}</TableCell>
+                        <TableCell>
+                          <Badge className={priorityColors[followup.priority]} variant="outline">
+                            {followup.priority.charAt(0).toUpperCase() + followup.priority.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={statusColors[followup.status]} variant="outline">
+                            {followup.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="icon" asChild>
+                              <Link href={`/leads/${followup.leadId?._id}`}>
+                                <Eye className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => deleteFollowup(followup._id)}
+                              disabled={deletingId === followup._id}
+                            >
+                              {deletingId === followup._id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>

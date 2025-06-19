@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -14,7 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, PenSquare, Trash2, CalendarPlus, Plus, Search, Loader2, AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Eye, PenSquare, Trash2, CalendarPlus, Plus, Search, Loader2, AlertCircle, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 
@@ -45,6 +46,8 @@ export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const { toast } = useToast();
 
   const fetchLeads = async () => {
@@ -66,24 +69,29 @@ export default function LeadsPage() {
     }
   };
 
-  const deleteLead = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this lead?')) {
-      return;
-    }
+  const openDeleteDialog = (lead: Lead) => {
+    setLeadToDelete(lead);
+    setDeleteDialogOpen(true);
+  };
+
+  const deleteLead = async () => {
+    if (!leadToDelete) return;
 
     try {
-      setDeletingId(id);
-      const response = await fetch(`/api/leads/${id}`, {
+      setDeletingId(leadToDelete._id);
+      const response = await fetch(`/api/leads/${leadToDelete._id}`, {
         method: 'DELETE',
       });
       const result = await response.json();
       
       if (result.success) {
-        setLeads(leads.filter(lead => lead._id !== id));
+        setLeads(leads.filter(lead => lead._id !== leadToDelete._id));
         toast({
           title: "Success",
           description: "Lead deleted successfully",
         });
+        setDeleteDialogOpen(false);
+        setLeadToDelete(null);
       } else {
         toast({
           title: "Error",
@@ -169,7 +177,7 @@ export default function LeadsPage() {
           <h1 className="text-gradient">Leads</h1>
           <p className="text-slate-600">Manage your leads and track their progress</p>
         </div>
-        <Link href="/leads/add">
+        <Link href="/add">
           <Button className="hover-scale shadow-premium self-start sm:self-auto">
             <Plus className="h-4 w-4 mr-2" />
             Add Lead
@@ -271,7 +279,7 @@ export default function LeadsPage() {
                           <Button 
                             variant="ghost" 
                             size="icon"
-                            onClick={() => deleteLead(lead._id)}
+                            onClick={() => openDeleteDialog(lead)}
                             disabled={deletingId === lead._id}
                             className="hover:bg-red-100 hover:text-red-600 transition-colors duration-300"
                           >
@@ -297,6 +305,62 @@ export default function LeadsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-white border-2 border-red-200 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600 text-lg font-semibold">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Lead
+            </DialogTitle>
+            <DialogDescription className="text-slate-600">
+              Are you sure you want to delete <span className="font-semibold text-slate-900">{leadToDelete?.name}</span>? 
+              This action cannot be undone and will permanently remove:
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="bg-red-100 border border-red-300 rounded-lg p-4 my-4">
+            <ul className="text-sm text-red-800 space-y-1">
+              <li>• Lead information and contact details</li>
+              <li>• All associated followup records</li>
+              <li>• Lead history and notes</li>
+            </ul>
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setLeadToDelete(null);
+              }}
+              disabled={deletingId !== null}
+              className="flex-1 sm:flex-none bg-white hover:bg-gray-50 border-gray-300"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={deleteLead}
+              disabled={deletingId !== null}
+              className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deletingId !== null ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Lead
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -79,15 +79,13 @@ function LeadCard({ lead }: { lead: Lead }) {
             </div>
             <div className="flex gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
               <Link href={`/leads/${lead._id}`}>
-                <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
-                  <Eye className="h-3 w-3 mr-1" />
-                  View
+                <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                  <Eye className="h-3 w-3" />
                 </Button>
               </Link>
               <Link href={`/leads/${lead._id}/edit`}>
-                <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
-                  <Edit className="h-3 w-3 mr-1" />
-                  Edit
+                <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                  <Edit className="h-3 w-3" />
                 </Button>
               </Link>
             </div>
@@ -253,7 +251,7 @@ export default function PipelinePage() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          <Link href="/leads/add">
+          <Link href="/add">
             <Button>
               Add Lead
             </Button>

@@ -24,7 +24,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={cn(inter.className, "min-h-screen antialiased bg-slate-50 dark:bg-slate-900 transition-colors duration-300")}>
+      <body 
+        className={cn(inter.className, "min-h-screen antialiased bg-slate-50 dark:bg-slate-900 transition-colors duration-300")}
+        suppressHydrationWarning={true}
+      >
         {/* <ThemeProvider> */}
           <div className="flex min-h-screen relative">
             {/* Subtle Background Pattern */}

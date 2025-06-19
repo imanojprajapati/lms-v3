@@ -14,10 +14,10 @@ const followupSchema = new mongoose.Schema({
     enum: ['low', 'medium', 'high'],
     required: true
   },
-  status: { 
+  status: {
     type: String,
     enum: ['New', 'Contacted', 'Interested', 'Converted', 'Lost'],
-    required: true
+    default: 'New'
   },
   notes: { type: String },
   createdAt: { type: Date, default: Date.now },

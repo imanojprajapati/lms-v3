@@ -23,6 +23,7 @@ import {
 import { Search, Eye, Loader2, AlertCircle, RefreshCw, Filter } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
+import { countries } from "@/lib/countries";
 
 interface Lead {
   _id: string;
@@ -43,6 +44,8 @@ const statusColors = {
   'Converted': 'bg-green-100 text-green-800',
   'Lost': 'bg-red-100 text-red-800',
 };
+
+const leadStatuses = ['New', 'Contacted', 'Interested', 'Converted', 'Lost'];
 
 export default function SearchPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -119,7 +122,6 @@ export default function SearchPage() {
 
   // Get unique values for filters
   const uniqueVisaTypes = [...new Set(leads.map(lead => lead.visaType))];
-  const uniqueCountries = [...new Set(leads.map(lead => lead.destinationCountry))];
 
   if (loading) {
     return (
@@ -181,11 +183,6 @@ export default function SearchPage() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          <Link href="/leads/add">
-            <Button className="hover-scale shadow-premium">
-              Add Lead
-            </Button>
-          </Link>
         </div>
       </div>
 
@@ -214,41 +211,39 @@ export default function SearchPage() {
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-12 bg-white/90 border-purple-200/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-xl">
                 <SelectValue placeholder="All Statuses" />
-          </SelectTrigger>
+              </SelectTrigger>
               <SelectContent className="bg-white border-purple-200/50 rounded-xl">
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="New">New</SelectItem>
-                <SelectItem value="Contacted">Contacted</SelectItem>
-                <SelectItem value="Interested">Interested</SelectItem>
-                <SelectItem value="Converted">Converted</SelectItem>
-                <SelectItem value="Lost">Lost</SelectItem>
-          </SelectContent>
-        </Select>
+                {leadStatuses.map(status => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             <Select value={visaTypeFilter} onValueChange={setVisaTypeFilter}>
               <SelectTrigger className="h-12 bg-white/90 border-purple-200/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-xl">
                 <SelectValue placeholder="All Visa Types" />
-          </SelectTrigger>
+              </SelectTrigger>
               <SelectContent className="bg-white border-purple-200/50 rounded-xl">
                 <SelectItem value="all">All Visa Types</SelectItem>
                 {uniqueVisaTypes.map(type => (
                   <SelectItem key={type} value={type}>{type}</SelectItem>
                 ))}
-          </SelectContent>
-        </Select>
+              </SelectContent>
+            </Select>
 
             <Select value={countryFilter} onValueChange={setCountryFilter}>
               <SelectTrigger className="h-12 bg-white/90 border-purple-200/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-xl">
                 <SelectValue placeholder="All Countries" />
-          </SelectTrigger>
+              </SelectTrigger>
               <SelectContent className="bg-white border-purple-200/50 rounded-xl">
                 <SelectItem value="all">All Countries</SelectItem>
-                {uniqueCountries.map(country => (
-                  <SelectItem key={country} value={country}>{country}</SelectItem>
+                {countries.map(country => (
+                  <SelectItem key={country.code} value={country.name}>{country.name}</SelectItem>
                 ))}
-          </SelectContent>
-        </Select>
-      </div>
+              </SelectContent>
+            </Select>
+          </div>
 
           {(searchTerm || statusFilter !== 'all' || visaTypeFilter !== 'all' || countryFilter !== 'all') && (
             <div className="flex justify-between items-center mt-4 pt-4 border-t">
@@ -268,8 +263,8 @@ export default function SearchPage() {
         <CardContent className="p-0">
           <div className="rounded-xl border border-purple-200/30 overflow-hidden">
             <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
+              <Table>
+                <TableHeader>
                   <TableRow className="bg-purple-50 hover:bg-purple-100 border-b border-purple-200/30">
                     <TableHead className="font-bold text-slate-700 h-14 whitespace-nowrap">Name</TableHead>
                     <TableHead className="font-bold text-slate-700 whitespace-nowrap">Email</TableHead>
@@ -279,64 +274,59 @@ export default function SearchPage() {
                     <TableHead className="font-bold text-slate-700 whitespace-nowrap">Country</TableHead>
                     <TableHead className="font-bold text-slate-700 whitespace-nowrap">Created</TableHead>
                     <TableHead className="text-right font-bold text-slate-700 whitespace-nowrap">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-                {filteredLeads.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-gray-500">
-                      {leads.length === 0 ? (
-                        <div>
-                          <div className="text-4xl mb-2">📋</div>
-                          <p className="text-lg font-medium mb-2">No leads found</p>
-                          <p className="mb-4">Start by adding your first lead</p>
-                          <Link href="/leads/add">
-                            <Button>
-                              Add Your First Lead
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredLeads.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-12 text-gray-500">
+                        {leads.length === 0 ? (
+                          <div>
+                            <div className="text-4xl mb-2">📋</div>
+                            <p className="text-lg font-medium mb-2">No leads found</p>
+                            <p className="mb-4">No leads available to display</p>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="text-4xl mb-2">🔍</div>
+                            <p className="text-lg font-medium mb-2">No results found</p>
+                            <p className="mb-4">Try adjusting your search criteria</p>
+                            <Button variant="outline" onClick={clearFilters}>
+                              Clear Filters
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredLeads.map((lead) => (
+                      <TableRow key={lead._id} className="hover:bg-gray-50">
+                        <TableCell className="font-medium">{lead.name}</TableCell>
+                        <TableCell>{lead.email}</TableCell>
+                        <TableCell>{lead.phone}</TableCell>
+                        <TableCell>
+                          <Badge className={statusColors[lead.status as keyof typeof statusColors]}>
+                            {lead.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{lead.visaType}</TableCell>
+                        <TableCell>{lead.destinationCountry}</TableCell>
+                        <TableCell className="text-gray-500">
+                          {formatDate(lead.createdAt)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Link href={`/leads/${lead._id}`}>
+                            <Button variant="ghost" size="icon" className="hover:bg-purple-100 hover:text-purple-600 transition-colors duration-300">
+                              <Eye className="h-4 w-4" />
                             </Button>
                           </Link>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="text-4xl mb-2">🔍</div>
-                          <p className="text-lg font-medium mb-2">No results found</p>
-                          <p className="mb-4">Try adjusting your search criteria</p>
-                          <Button variant="outline" onClick={clearFilters}>
-                            Clear Filters
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredLeads.map((lead) => (
-                    <TableRow key={lead._id} className="hover:bg-gray-50">
-                      <TableCell className="font-medium">{lead.name}</TableCell>
-                      <TableCell>{lead.email}</TableCell>
-                      <TableCell>{lead.phone}</TableCell>
-                <TableCell>
-                        <Badge className={statusColors[lead.status as keyof typeof statusColors]}>
-                          {lead.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{lead.visaType}</TableCell>
-                      <TableCell>{lead.destinationCountry}</TableCell>
-                      <TableCell className="text-gray-500">
-                        {formatDate(lead.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Link href={`/leads/${lead._id}`}>
-                          <Button variant="ghost" size="icon" className="hover:bg-purple-100 hover:text-purple-600 transition-colors duration-300">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </TableCell>
-              </TableRow>
-                  ))
-                )}
-          </TableBody>
-        </Table>
-      </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>
