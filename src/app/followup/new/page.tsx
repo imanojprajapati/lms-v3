@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ArrowLeft, Save, Loader2, Calendar as CalendarIcon, Clock } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Calendar as CalendarIcon } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -24,7 +24,7 @@ interface Lead {
   status: string;
 }
 
-export default function NewFollowupPage() {
+function NewFollowupPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -414,4 +414,12 @@ export default function NewFollowupPage() {
       </Card>
     </div>
   );
-} 
+}
+
+export default function NewFollowupPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewFollowupPageContent />
+    </Suspense>
+  );
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -136,7 +136,7 @@ export default function PipelinePage() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const fetchPipelineData = async () => {
+  const fetchPipelineData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -175,11 +175,11 @@ export default function PipelinePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchPipelineData();
-  }, [toast]);
+  }, [fetchPipelineData]);
 
   if (loading) {
     return (

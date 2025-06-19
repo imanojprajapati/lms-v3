@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -78,7 +78,7 @@ export default function FollowupPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const fetchFollowups = async () => {
+  const fetchFollowups = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -106,7 +106,7 @@ export default function FollowupPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   const deleteFollowup = async (id: string) => {
     if (!confirm('Are you sure you want to delete this followup?')) {
@@ -146,7 +146,7 @@ export default function FollowupPage() {
 
   useEffect(() => {
     fetchFollowups();
-  }, [toast]);
+  }, [fetchFollowups]);
 
   const filteredFollowups = followups.filter(followup => {
     const matchesSearch = 

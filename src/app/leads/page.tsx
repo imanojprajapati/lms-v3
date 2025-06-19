@@ -10,11 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Eye, PenSquare, Trash2, CalendarPlus, Plus, Search, Loader2, AlertCircle, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -30,14 +30,6 @@ interface Lead {
   createdAt: string;
   updatedAt: string;
 }
-
-const statusColors = {
-  'New': 'bg-blue-100 text-blue-800',
-  'Contacted': 'bg-yellow-100 text-yellow-800',
-  'Interested': 'bg-orange-100 text-orange-800',
-  'Converted': 'bg-green-100 text-green-800',
-  'Lost': 'bg-red-100 text-red-800',
-};
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);

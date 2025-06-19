@@ -174,14 +174,6 @@ export default function DashboardPage() {
     return null;
   }
 
-  const statusColors = {
-    'New': 'bg-blue-100 text-blue-800',
-    'Contacted': 'bg-yellow-100 text-yellow-800',
-    'Interested': 'bg-orange-100 text-orange-800',
-    'Converted': 'bg-green-100 text-green-800',
-    'Lost': 'bg-red-100 text-red-800',
-  };
-
   return (
     <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">

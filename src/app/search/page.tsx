@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,7 +57,7 @@ export default function SearchPage() {
   const [countryFilter, setCountryFilter] = useState('all');
   const { toast } = useToast();
 
-  const fetchLeads = async () => {
+  const fetchLeads = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -85,11 +85,11 @@ export default function SearchPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchLeads();
-  }, [toast]);
+  }, [fetchLeads]);
 
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = 
