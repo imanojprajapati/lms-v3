@@ -8,9 +8,12 @@ import { Switch } from "@/components/ui/switch";
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
+import { useUser } from "@/contexts/UserContext";
+import UserManagement from "@/components/UserManagement";
 
 export default function SettingsPage() {
   const { toast } = useToast();
+  const { user, hasPermission } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [settings, setSettings] = useState({
     companyName: "",
@@ -98,6 +101,9 @@ export default function SettingsPage() {
           <TabsTrigger value="general" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg px-6 py-2">General</TabsTrigger>
           <TabsTrigger value="notifications" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg px-6 py-2">Notifications</TabsTrigger>
           <TabsTrigger value="appearance" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg px-6 py-2">Appearance</TabsTrigger>
+          {hasPermission(['user-management']) && (
+            <TabsTrigger value="users" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg px-6 py-2">Users</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="general">
@@ -211,6 +217,19 @@ export default function SettingsPage() {
               </div>
             </div>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="users">
+          {hasPermission(['user-management']) ? (
+            <UserManagement />
+          ) : (
+            <Card className="glass-card shadow-premium border-blue-200/30">
+              <div className="p-6">
+                <h2 className="text-xl font-semibold mb-6 text-gradient-secondary">Access Denied</h2>
+                <p className="text-slate-600">You don't have permission to access user management.</p>
+              </div>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
       

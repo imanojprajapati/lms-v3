@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LeadChart } from "@/components/LeadChart";
-import { Users, TrendingUp, Calendar, Target, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { useUser } from "@/contexts/UserContext";
+import { Users, TrendingUp, Calendar, Target, Loader2, AlertCircle, RefreshCw, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Lead {
@@ -30,11 +32,14 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { user, hasPermission, isLoading } = useUser();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Define fetchStats callback BEFORE any conditional returns
   const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
@@ -119,6 +124,50 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
+
+  // Check if user has dashboard permission and redirect if needed
+  useEffect(() => {
+    if (!isLoading && user && !hasPermission(['dashboard'])) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to access the dashboard.",
+        variant: "destructive",
+      });
+      router.push('/leads'); // Redirect to a page they can access
+      return;
+    }
+  }, [user, isLoading, hasPermission, router, toast]);
+
+  // Show access denied for users without dashboard permission
+  if (!isLoading && user && !hasPermission(['dashboard'])) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-3xl font-bold text-red-600">Access Denied</h1>
+          <p className="text-gray-600 mt-1">You don't have permission to access the dashboard</p>
+        </div>
+        <Card>
+          <CardContent className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <Lock className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Dashboard Access Restricted</h3>
+              <p className="text-gray-600 mb-4">
+                Your role ({user?.role.replace('-', ' ')}) doesn't have access to the dashboard.
+              </p>
+              <div className="space-x-2">
+                <Button onClick={() => router.push('/leads')} variant="outline">
+                  Go to Leads
+                </Button>
+                <Button onClick={() => router.push('/pipeline')}>
+                  Go to Pipeline
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

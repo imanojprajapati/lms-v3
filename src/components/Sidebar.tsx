@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { useUser } from "@/contexts/UserContext";
+import { Button } from "@/components/ui/button";
 // import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   LayoutDashboard,
@@ -15,21 +17,58 @@ import {
   Search,
   Menu,
   X,
+  LogOut,
+  User,
+  Crown,
+  Shield,
+  Briefcase,
+  Headphones,
 } from "lucide-react";
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Leads", href: "/leads", icon: Users },
-  { name: "Add Lead", href: "/add", icon: UserPlus },
-  { name: "Pipeline", href: "/pipeline", icon: GitPullRequestDraft },
-  { name: "Follow-ups", href: "/followup", icon: Calendar },
-  { name: "Search", href: "/search", icon: Search },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: "dashboard" },
+  { name: "Leads", href: "/leads", icon: Users, permission: "leads" },
+  { name: "Add Lead", href: "/add", icon: UserPlus, permission: "add-leads" },
+  { name: "Pipeline", href: "/pipeline", icon: GitPullRequestDraft, permission: "pipeline" },
+  { name: "Follow-ups", href: "/followup", icon: Calendar, permission: "followup" },
+  { name: "Search", href: "/search", icon: Search, permission: "search" },
+  { name: "Settings", href: "/settings", icon: Settings, permission: "settings" },
 ];
+
+const ROLE_ICONS = {
+  admin: Crown,
+  'sub-admin': Shield,
+  manager: Briefcase,
+  staff: User,
+  'customer-support': Headphones,
+};
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, hasPermission, logout } = useUser();
+
+  // Filter navigation items based on user permissions
+  const filteredNavigation = navigation.filter(item => 
+    hasPermission([item.permission])
+  );
+
+  const getRoleIcon = () => {
+    if (!user) return User;
+    return ROLE_ICONS[user.role] || User;
+  };
+
+  const getRoleColor = () => {
+    if (!user) return 'text-slate-500';
+    switch (user.role) {
+      case 'admin': return 'text-red-600';
+      case 'sub-admin': return 'text-orange-600';
+      case 'manager': return 'text-blue-600';
+      case 'staff': return 'text-green-600';
+      case 'customer-support': return 'text-purple-600';
+      default: return 'text-slate-500';
+    }
+  };
 
   return (
     <div>
@@ -74,7 +113,7 @@ export default function Sidebar() {
         
         <nav className="flex flex-1 flex-col px-6 py-4">
           <ul role="list" className="flex flex-1 flex-col gap-y-1">
-            {navigation.map((item) => {
+            {filteredNavigation.map((item) => {
               const isActive = pathname === item.href || 
                 (item.href !== "/dashboard" && pathname.startsWith(item.href));
               return (
@@ -102,6 +141,31 @@ export default function Sidebar() {
           </ul>
           
           <div className="mt-auto pt-6 border-t border-slate-200/50">
+            {user && (
+              <div className="mb-4 p-3 bg-slate-50 rounded-xl">
+                <div className="flex items-center space-x-3">
+                  <div className={cn("w-8 h-8 rounded-full flex items-center justify-center bg-white shadow-sm", getRoleColor())}>
+                    {(() => {
+                      const RoleIcon = getRoleIcon();
+                      return <RoleIcon className="w-4 h-4" />;
+                    })()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-900 truncate">{user.username}</p>
+                    <p className="text-xs text-slate-500 capitalize">{user.role.replace('-', ' ')}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={logout}
+                  className="w-full mt-2 text-xs text-slate-600 hover:text-red-600"
+                >
+                  <LogOut className="w-3 h-3 mr-2" />
+                  Logout
+                </Button>
+              </div>
+            )}
             <div className="text-xs text-slate-500 text-center font-medium">
               <div className="flex items-center justify-center space-x-1">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -133,7 +197,7 @@ export default function Sidebar() {
         
         <nav className="flex flex-1 flex-col px-6 py-4">
           <ul role="list" className="flex flex-1 flex-col gap-y-1">
-            {navigation.map((item) => {
+            {filteredNavigation.map((item) => {
               const isActive = pathname === item.href || 
                 (item.href !== "/dashboard" && pathname.startsWith(item.href));
               return (
@@ -162,6 +226,31 @@ export default function Sidebar() {
           </ul>
           
           <div className="mt-auto pt-6 border-t border-slate-200/50">
+            {user && (
+              <div className="mb-4 p-3 bg-slate-50 rounded-xl">
+                <div className="flex items-center space-x-3">
+                  <div className={cn("w-8 h-8 rounded-full flex items-center justify-center bg-white shadow-sm", getRoleColor())}>
+                    {(() => {
+                      const RoleIcon = getRoleIcon();
+                      return <RoleIcon className="w-4 h-4" />;
+                    })()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-900 truncate">{user.username}</p>
+                    <p className="text-xs text-slate-500 capitalize">{user.role.replace('-', ' ')}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={logout}
+                  className="w-full mt-2 text-xs text-slate-600 hover:text-red-600"
+                >
+                  <LogOut className="w-3 h-3 mr-2" />
+                  Logout
+                </Button>
+              </div>
+            )}
             <div className="text-xs text-slate-500 text-center font-medium">
               <div className="flex items-center justify-center space-x-1">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
